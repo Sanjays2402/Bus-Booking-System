@@ -39,7 +39,7 @@ export default function HomePage() {
           <div className="text-center animate-fade-in">
             <div className="inline-flex items-center gap-2 glass px-4 py-2 rounded-full text-sm text-purple-300 mb-6">
               <Sparkles className="w-4 h-4" />
-              Trusted by 50,000+ travelers
+              Fast, Secure & Affordable
             </div>
             <h1 className="text-5xl md:text-7xl font-extrabold mb-6 bg-gradient-to-r from-white via-purple-200 to-cyan-200 bg-clip-text text-transparent text-glow leading-tight">
               Travel Made<br />Simple
@@ -138,7 +138,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="glass-strong mt-16 py-8 text-center text-sm text-white/30">
-        <p>© 2024 BusGo. Built with ❤️ by Sanjay Santhanam</p>
+        <p>© 2026 BusGo. Built with ❤️ by Sanjay Santhanam</p>
       </footer>
     </div>
   );
