@@ -73,32 +73,37 @@ function generateSeats(busId: number, totalSeats: number, isSleeper: boolean) {
 }
 
 const allBuses = db.prepare('SELECT * FROM buses').all() as any[];
+const busIdMap: Record<number, number> = {};
+allBuses.forEach((bus: any, idx: number) => {
+  busIdMap[idx + 1] = bus.id;
+});
+
 for (const bus of allBuses) {
   generateSeats(bus.id, bus.total_seats, bus.bus_type.includes('Sleeper'));
 }
 
-// Routes
+// Routes — use busIdMap to map logical index to actual DB id
 const routes = [
-  { busId: 1, origin: 'Seattle', dest: 'Portland', dep: '06:00', arr: '09:30', dur: 210, price: 25 },
-  { busId: 2, origin: 'Seattle', dest: 'Portland', dep: '22:00', arr: '01:30', dur: 210, price: 35 },
-  { busId: 3, origin: 'San Francisco', dest: 'Los Angeles', dep: '07:00', arr: '13:00', dur: 360, price: 45 },
-  { busId: 4, origin: 'San Francisco', dest: 'Los Angeles', dep: '14:00', arr: '20:00', dur: 360, price: 30 },
-  { busId: 5, origin: 'Los Angeles', dest: 'Las Vegas', dep: '08:00', arr: '12:30', dur: 270, price: 35 },
-  { busId: 6, origin: 'Los Angeles', dest: 'Las Vegas', dep: '20:00', arr: '00:30', dur: 270, price: 50 },
-  { busId: 7, origin: 'Portland', dest: 'San Francisco', dep: '06:30', arr: '16:30', dur: 600, price: 40 },
-  { busId: 8, origin: 'Seattle', dest: 'San Francisco', dep: '07:00', arr: '20:00', dur: 780, price: 55 },
-  { busId: 9, origin: 'Las Vegas', dest: 'Phoenix', dep: '09:00', arr: '13:30', dur: 270, price: 40 },
-  { busId: 10, origin: 'San Francisco', dest: 'Sacramento', dep: '08:00', arr: '10:00', dur: 120, price: 18 },
-  { busId: 11, origin: 'Los Angeles', dest: 'San Diego', dep: '10:00', arr: '12:30', dur: 150, price: 22 },
-  { busId: 12, origin: 'Seattle', dest: 'Vancouver', dep: '09:00', arr: '13:00', dur: 240, price: 30 },
-  { busId: 1, origin: 'Portland', dest: 'Seattle', dep: '15:00', arr: '18:30', dur: 210, price: 25 },
-  { busId: 3, origin: 'Los Angeles', dest: 'San Francisco', dep: '08:00', arr: '14:00', dur: 360, price: 45 },
-  { busId: 5, origin: 'Las Vegas', dest: 'Los Angeles', dep: '14:00', arr: '18:30', dur: 270, price: 35 },
+  { busIdx: 1, origin: 'Seattle', dest: 'Portland', dep: '06:00', arr: '09:30', dur: 210, price: 25 },
+  { busIdx: 2, origin: 'Seattle', dest: 'Portland', dep: '22:00', arr: '01:30', dur: 210, price: 35 },
+  { busIdx: 3, origin: 'San Francisco', dest: 'Los Angeles', dep: '07:00', arr: '13:00', dur: 360, price: 45 },
+  { busIdx: 4, origin: 'San Francisco', dest: 'Los Angeles', dep: '14:00', arr: '20:00', dur: 360, price: 30 },
+  { busIdx: 5, origin: 'Los Angeles', dest: 'Las Vegas', dep: '08:00', arr: '12:30', dur: 270, price: 35 },
+  { busIdx: 6, origin: 'Los Angeles', dest: 'Las Vegas', dep: '20:00', arr: '00:30', dur: 270, price: 50 },
+  { busIdx: 7, origin: 'Portland', dest: 'San Francisco', dep: '06:30', arr: '16:30', dur: 600, price: 40 },
+  { busIdx: 8, origin: 'Seattle', dest: 'San Francisco', dep: '07:00', arr: '20:00', dur: 780, price: 55 },
+  { busIdx: 9, origin: 'Las Vegas', dest: 'Phoenix', dep: '09:00', arr: '13:30', dur: 270, price: 40 },
+  { busIdx: 10, origin: 'San Francisco', dest: 'Sacramento', dep: '08:00', arr: '10:00', dur: 120, price: 18 },
+  { busIdx: 11, origin: 'Los Angeles', dest: 'San Diego', dep: '10:00', arr: '12:30', dur: 150, price: 22 },
+  { busIdx: 12, origin: 'Seattle', dest: 'Vancouver', dep: '09:00', arr: '13:00', dur: 240, price: 30 },
+  { busIdx: 1, origin: 'Portland', dest: 'Seattle', dep: '15:00', arr: '18:30', dur: 210, price: 25 },
+  { busIdx: 3, origin: 'Los Angeles', dest: 'San Francisco', dep: '08:00', arr: '14:00', dur: 360, price: 45 },
+  { busIdx: 5, origin: 'Las Vegas', dest: 'Los Angeles', dep: '14:00', arr: '18:30', dur: 270, price: 35 },
 ];
 
 const insertRoute = db.prepare(`INSERT INTO routes (bus_id, origin, destination, departure_time, arrival_time, duration_minutes, price_base, days_of_week) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
 for (const r of routes) {
-  insertRoute.run(r.busId, r.origin, r.dest, r.dep, r.arr, r.dur, r.price, 'Mon,Tue,Wed,Thu,Fri,Sat,Sun');
+  insertRoute.run(busIdMap[r.busIdx], r.origin, r.dest, r.dep, r.arr, r.dur, r.price, 'Mon,Tue,Wed,Thu,Fri,Sat,Sun');
 }
 
 console.log('✅ Seeded:');
