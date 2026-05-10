@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import db from '../db';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -102,5 +105,56 @@ router.get('/cities/list', (_req, res) => {
   const cities = [...new Set([...origins, ...dests].map((c: any) => c.city))].sort();
   res.json(cities);
 });
+
+// Reviews: list reviews for a route (with average rating)
+router.get('/:id/reviews', (req, res) => {
+  const routeId = Number(req.params.id);
+  const route = db.prepare('SELECT id FROM routes WHERE id = ?').get(routeId);
+  if (!route) return res.status(404).json({ error: 'Route not found' });
+  const reviews = db
+    .prepare(
+      `SELECT r.id, r.rating, r.comment, r.created_at, u.name as user_name
+         FROM reviews r JOIN users u ON r.user_id = u.id
+        WHERE r.route_id = ?
+        ORDER BY r.created_at DESC`,
+    )
+    .all(routeId);
+  const stats = db
+    .prepare(
+      `SELECT COUNT(*) as count, AVG(rating) as avg_rating
+         FROM reviews WHERE route_id = ?`,
+    )
+    .get(routeId) as { count: number; avg_rating: number | null };
+  res.json({
+    count: stats.count,
+    average: stats.avg_rating ? Math.round(stats.avg_rating * 10) / 10 : null,
+    reviews,
+  });
+});
+
+const reviewSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().trim().max(800).optional(),
+});
+
+// Reviews: create / upsert a review for a route (authenticated)
+router.post(
+  '/:id/reviews',
+  authMiddleware,
+  validate(reviewSchema),
+  (req: AuthRequest, res) => {
+    const routeId = Number(req.params.id);
+    const route = db.prepare('SELECT id FROM routes WHERE id = ?').get(routeId);
+    if (!route) return res.status(404).json({ error: 'Route not found' });
+    const { rating, comment } = req.body as { rating: number; comment?: string };
+    db.prepare(
+      `INSERT INTO reviews (route_id, user_id, rating, comment)
+           VALUES (?, ?, ?, ?)
+           ON CONFLICT(route_id, user_id)
+           DO UPDATE SET rating = excluded.rating, comment = excluded.comment, created_at = datetime('now')`,
+    ).run(routeId, req.userId!, rating, comment ?? null);
+    res.status(201).json({ message: 'Review saved' });
+  },
+);
 
 export default router;

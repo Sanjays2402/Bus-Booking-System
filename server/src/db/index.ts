@@ -78,10 +78,21 @@ export function initDB() {
       passenger_gender TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      route_id INTEGER NOT NULL REFERENCES routes(id),
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+      comment TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(route_id, user_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_routes_origin_dest ON routes(origin, destination);
     CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id);
     CREATE INDEX IF NOT EXISTS idx_bookings_route_date ON bookings(route_id, travel_date);
     CREATE INDEX IF NOT EXISTS idx_seats_bus ON seats(bus_id);
+    CREATE INDEX IF NOT EXISTS idx_reviews_route ON reviews(route_id);
   `);
 }
 
