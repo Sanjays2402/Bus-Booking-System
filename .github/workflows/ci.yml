@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+            client/package-lock.json
+
+      - name: Install root deps
+        run: npm ci --ignore-scripts || npm install --ignore-scripts
+
+      - name: Install server deps
+        working-directory: server
+        run: npm ci --ignore-scripts || npm install --ignore-scripts
+
+      - name: Install client deps
+        working-directory: client
+        run: npm ci --ignore-scripts || npm install --ignore-scripts
+
+      - name: Rebuild better-sqlite3 (native)
+        working-directory: server
+        run: npm rebuild better-sqlite3
+
+      - name: Build server
+        working-directory: server
+        run: npm run build
+
+      - name: Build client
+        working-directory: client
+        run: npm run build
+
+      - name: Test server
+        working-directory: server
+        run: npm test
