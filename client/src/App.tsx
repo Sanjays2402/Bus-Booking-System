@@ -1,7 +1,8 @@
-import { Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Bus, User, LogOut, LayoutDashboard } from 'lucide-react';
-import { AuthProvider, useAuth } from './hooks/useAuth';
+import { AuthProvider } from './hooks/useAuth';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import SearchResults from './pages/SearchResults';
 import SeatSelection from './pages/SeatSelection';
@@ -21,63 +22,25 @@ function BackgroundOrbs() {
   );
 }
 
-function Navbar() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  return (
-    <nav className="glass-strong sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2.5 text-xl font-bold text-white hover:text-purple-300 transition group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center group-hover:shadow-lg group-hover:shadow-purple-500/25 transition">
-            <Bus className="w-5 h-5 text-white" />
-          </div>
-          BusGo
-        </Link>
-        <div className="flex items-center gap-3">
-          {user ? (
-            <>
-              <Link to="/profile" className="btn-glass flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:text-white">
-                <User className="w-4 h-4" />
-                {user.name}
-              </Link>
-              {user.role === 'admin' && (
-                <Link to="/admin" className="btn-glass flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-purple-300 hover:text-purple-200">
-                  <LayoutDashboard className="w-4 h-4" />
-                  Admin
-                </Link>
-              )}
-              <button onClick={() => { logout(); navigate('/'); }} className="btn-glass p-2 rounded-xl text-white/50 hover:text-white">
-                <LogOut className="w-4 h-4" />
-              </button>
-            </>
-          ) : (
-            <Link to="/auth" className="btn-glow px-5 py-2 rounded-xl font-semibold text-sm text-white">
-              Login
-            </Link>
-          )}
-        </div>
-      </div>
-    </nav>
-  );
-}
-
 function AppContent() {
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative flex flex-col">
       <BackgroundOrbs />
-      <div className="relative z-10">
+      <div className="relative z-10 flex-1 flex flex-col">
         <Navbar />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/search" element={<SearchResults />} />
-          <Route path="/seats/:routeId" element={<SeatSelection />} />
-          <Route path="/booking" element={<BookingPage />} />
-          <Route path="/booking/confirmed" element={<BookingConfirmation />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/auth" element={<AuthPage />} />
-        </Routes>
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/search" element={<SearchResults />} />
+            <Route path="/seats/:routeId" element={<SeatSelection />} />
+            <Route path="/booking" element={<BookingPage />} />
+            <Route path="/booking/confirmed" element={<BookingConfirmation />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/auth" element={<AuthPage />} />
+          </Routes>
+        </main>
+        <Footer />
       </div>
       <Toaster
         position="top-right"
