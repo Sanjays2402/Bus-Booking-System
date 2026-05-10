@@ -129,8 +129,11 @@ users        → id, email, name, password, role, created_at
 buses        → id, operator_name, bus_number, bus_type, total_seats, amenities, rating
 routes       → id, bus_id, origin, destination, departure/arrival_time, duration, price
 seats        → id, bus_id, seat_number, seat_type, row, column, price_multiplier, deck
-bookings     → id, booking_id, user_id, route_id, travel_date, status, total_amount
+bookings     → id, booking_id, user_id, route_id, travel_date, status, total_amount,
+                discount_amount, promo_code
 booking_details → id, booking_id, seat_id, passenger_name, age, gender
+reviews      → id, route_id, user_id, rating, comment, created_at (UNIQUE route+user)
+promo_codes  → id, code, kind, amount, min_total, max_discount, active, expires_at
 ```
 
 ## 📊 Seed Data
@@ -157,8 +160,15 @@ Pre-loaded with **12 buses** from 5 operators across **15 routes** between major
 
 ### Bookings
 - `POST /api/bookings` — Create booking
-- `GET /api/bookings/my` — Get user's bookings
-- `PATCH /api/bookings/:id/cancel` — Cancel booking
+- `POST /api/bookings/validate-promo` — Validate a promo code against a cart total
+- `GET /api/bookings/my` — Current user's bookings
+- `GET /api/bookings/:bookingId` — Get booking by public id (status polling)
+- `GET /api/bookings/:bookingId/refund-quote` — Refund preview based on hours-until-travel
+- `PATCH /api/bookings/:id/cancel` — Cancel and refund per policy
+
+### Reviews
+- `GET /api/routes/:id/reviews` — Public reviews for a route
+- `POST /api/routes/:id/reviews` — Add a review (auth required, one per user per route)
 
 ### Admin
 - `GET /api/admin/routes` — All routes
@@ -167,6 +177,24 @@ Pre-loaded with **12 buses** from 5 operators across **15 routes** between major
 - `DELETE /api/admin/routes/:id` — Delete route
 - `GET /api/admin/routes/:id/bookings` — Route bookings
 - `GET /api/admin/revenue` — Revenue summary
+
+## 🧪 Testing
+
+```bash
+cd server && npm test          # vitest + supertest (auth, routes, promo)
+```
+
+CI runs the full server build, client build, and test suite on every push and PR
+(see `.github/workflows/ci.yml`).
+
+## 💸 Promo codes
+
+Seeded codes (created automatically on first DB init):
+
+| Code       | Type    | Value | Min total |
+|------------|---------|-------|-----------|
+| WELCOME10  | percent | 10%   | $0        |
+| SAVE5      | flat    | $5    | $20       |
 
 ## 📄 License
 
