@@ -108,7 +108,8 @@ for (const r of routes) {
 
 console.log('✅ Seeded:');
 console.log(`   ${allBuses.length} buses`);
-console.log(`   ${db.prepare('SELECT COUNT(*) as c FROM seats').get()?.c || 0} seats`);
+const seatCountRow = db.prepare('SELECT COUNT(*) as c FROM seats').get() as { c: number } | undefined;
+console.log(`   ${seatCountRow?.c || 0} seats`);
 console.log(`   ${routes.length} routes`);
 console.log(`   2 users (admin@busbooking.com / admin123, demo@example.com / user123)`);
 console.log('🎉 Done!');
