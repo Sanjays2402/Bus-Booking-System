@@ -13,6 +13,9 @@ export default function SearchResults() {
   const [sortBy, setSortBy] = useState('departure');
   const [busTypeFilter, setBusTypeFilter] = useState('');
   const [detailsRoute, setDetailsRoute] = useState<Route | null>(null);
+  const [maxPrice, setMaxPrice] = useState<number>(200);
+  const [departureBuckets, setDepartureBuckets] = useState<Set<string>>(new Set());
+  const [amenityFilters, setAmenityFilters] = useState<Set<string>>(new Set());
 
   const origin = params.get('origin') || '';
   const destination = params.get('destination') || '';
@@ -32,6 +35,35 @@ export default function SearchResults() {
     return `${h}h ${m > 0 ? `${m}m` : ''}`;
   };
 
+  const departureBucketOf = (time: string): string => {
+    const hour = parseInt(time.split(':')[0] || '0', 10);
+    if (hour < 6) return 'early';
+    if (hour < 12) return 'morning';
+    if (hour < 18) return 'afternoon';
+    return 'night';
+  };
+
+  const filteredRoutes = routes.filter((r) => {
+    if (r.price_base > maxPrice) return false;
+    if (departureBuckets.size > 0 && !departureBuckets.has(departureBucketOf(r.departure_time))) {
+      return false;
+    }
+    if (amenityFilters.size > 0) {
+      const amenities: string[] = JSON.parse(r.amenities || '[]');
+      for (const a of amenityFilters) {
+        if (!amenities.includes(a)) return false;
+      }
+    }
+    return true;
+  });
+
+  const toggle = <T,>(set: Set<T>, value: T): Set<T> => {
+    const next = new Set(set);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    return next;
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
@@ -46,8 +78,95 @@ export default function SearchResults() {
             {new Date(date + 'T00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
         )}
-        <p className="text-white/30 text-sm mt-1">{routes.length} bus{routes.length !== 1 ? 'es' : ''} found</p>
+        <p className="text-white/30 text-sm mt-1">{filteredRoutes.length} of {routes.length} bus{routes.length !== 1 ? 'es' : ''}</p>
       </div>
+
+      <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+        {/* Filter sidebar */}
+        <aside className="glass rounded-2xl p-5 h-fit space-y-5 sticky top-24">
+          <div className="flex items-center gap-2 text-sm text-white font-semibold">
+            <Filter className="w-4 h-4 text-purple-400" />
+            Filters
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Max price: ${maxPrice}
+            </label>
+            <input
+              type="range"
+              min={10}
+              max={200}
+              step={5}
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(Number(e.target.value))}
+              className="w-full accent-purple-500"
+            />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-white/70 mb-2">Departure</p>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { id: 'early', label: 'Before 6am' },
+                { id: 'morning', label: '6am–12pm' },
+                { id: 'afternoon', label: '12pm–6pm' },
+                { id: 'night', label: 'After 6pm' },
+              ].map((b) => {
+                const active = departureBuckets.has(b.id);
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setDepartureBuckets(toggle(departureBuckets, b.id))}
+                    className={`px-2.5 py-1.5 rounded-full text-xs border transition ${
+                      active
+                        ? 'bg-purple-500/30 border-purple-400/50 text-white'
+                        : 'border-white/15 text-white/60 hover:text-white'
+                    }`}
+                  >
+                    {b.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-white/70 mb-2">Amenities</p>
+            <div className="flex flex-wrap gap-1.5">
+              {['WiFi', 'USB Charging', 'Power Outlets', 'Snacks', 'Blanket'].map((a) => {
+                const active = amenityFilters.has(a);
+                return (
+                  <button
+                    key={a}
+                    type="button"
+                    onClick={() => setAmenityFilters(toggle(amenityFilters, a))}
+                    className={`px-2.5 py-1.5 rounded-full text-xs border transition ${
+                      active
+                        ? 'bg-cyan-500/30 border-cyan-400/50 text-white'
+                        : 'border-white/15 text-white/60 hover:text-white'
+                    }`}
+                  >
+                    {a}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {(departureBuckets.size > 0 || amenityFilters.size > 0 || maxPrice < 200) && (
+            <button
+              type="button"
+              onClick={() => {
+                setDepartureBuckets(new Set());
+                setAmenityFilters(new Set());
+                setMaxPrice(200);
+              }}
+              className="text-xs text-purple-300 hover:text-purple-200"
+            >
+              Reset filters
+            </button>
+          )}
+        </aside>
+
+        <div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-8 animate-fade-in">
@@ -76,14 +195,14 @@ export default function SearchResults() {
           <div className="inline-block w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
           <p className="text-white/40 mt-4">Searching buses...</p>
         </div>
-      ) : routes.length === 0 ? (
+      ) : filteredRoutes.length === 0 ? (
         <div className="text-center py-20 glass rounded-3xl">
-          <p className="text-white/50 text-lg">No buses found for this route</p>
+          <p className="text-white/50 text-lg">No buses match these filters</p>
           <button onClick={() => navigate('/')} className="mt-4 text-purple-400 hover:text-purple-300 transition">← Try a different search</button>
         </div>
       ) : (
         <div className="space-y-4">
-          {routes.map((route, idx) => {
+          {filteredRoutes.map((route, idx) => {
             const amenities: string[] = JSON.parse(route.amenities || '[]');
             return (
               <div
@@ -166,6 +285,8 @@ export default function SearchResults() {
           })}
         </div>
       )}
+        </div>
+      </div>
       <BusDetailsDrawer route={detailsRoute} onClose={() => setDetailsRoute(null)} />
     </div>
   );
