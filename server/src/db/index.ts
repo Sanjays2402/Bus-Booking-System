@@ -108,6 +108,16 @@ export function initDB() {
     CREATE INDEX IF NOT EXISTS idx_promo_code ON promo_codes(code);
   `);
 
+  // Lightweight migrations: add nullable columns to bookings if missing
+  const cols = db.prepare("PRAGMA table_info(bookings)").all() as Array<{ name: string }>;
+  const hasCol = (n: string) => cols.some((c) => c.name === n);
+  if (!hasCol('discount_amount')) {
+    db.exec('ALTER TABLE bookings ADD COLUMN discount_amount REAL DEFAULT 0');
+  }
+  if (!hasCol('promo_code')) {
+    db.exec('ALTER TABLE bookings ADD COLUMN promo_code TEXT');
+  }
+
   // Seed a couple of starter promo codes if table is empty
   const promoCount = db.prepare('SELECT COUNT(*) as c FROM promo_codes').get() as { c: number };
   if (promoCount.c === 0) {

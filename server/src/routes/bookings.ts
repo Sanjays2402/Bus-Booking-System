@@ -30,7 +30,7 @@ router.post('/validate-promo', validate(validatePromoSchema), (req, res) => {
 
 // Create booking
 router.post('/', authMiddleware, validate(createBookingSchema), (req: AuthRequest, res) => {
-  const { routeId, travelDate, passengers } = req.body;
+  const { routeId, travelDate, passengers, promoCode } = req.body;
 
   const route = db.prepare('SELECT r.*, b.bus_type FROM routes r JOIN buses b ON r.bus_id = b.id WHERE r.id = ?').get(routeId) as any;
   if (!route) return res.status(404).json({ error: 'Route not found' });
@@ -50,15 +50,36 @@ router.post('/', authMiddleware, validate(createBookingSchema), (req: AuthReques
 
   // Calculate total
   const seats = db.prepare(`SELECT * FROM seats WHERE id IN (${seatIds.map(() => '?').join(',')})`).all(...seatIds) as any[];
-  const totalAmount = seats.reduce((sum: number, s: any) => sum + Math.round(route.price_base * s.price_multiplier * 100) / 100, 0);
+  const subtotal = seats.reduce((sum: number, s: any) => sum + Math.round(route.price_base * s.price_multiplier * 100) / 100, 0);
+
+  // Apply promo code if provided
+  let discount = 0;
+  let appliedCode: string | null = null;
+  if (promoCode) {
+    const promo = evaluatePromo(promoCode, subtotal);
+    if (!promo.ok) return res.status(400).json({ error: promo.reason });
+    discount = promo.discount || 0;
+    appliedCode = promo.promo!.code;
+  }
+  const totalAmount = Math.round((subtotal - discount) * 100) / 100;
 
   const bookingId = `BK-${uuidv4().slice(0, 8).toUpperCase()}`;
 
-  const insertBooking = db.prepare(`INSERT INTO bookings (booking_id, user_id, route_id, travel_date, total_amount) VALUES (?, ?, ?, ?, ?)`);
+  const insertBooking = db.prepare(
+    `INSERT INTO bookings (booking_id, user_id, route_id, travel_date, total_amount, discount_amount, promo_code) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  );
   const insertDetail = db.prepare(`INSERT INTO booking_details (booking_id, seat_id, passenger_name, passenger_age, passenger_gender) VALUES (?, ?, ?, ?, ?)`);
 
   const txn = db.transaction(() => {
-    const result = insertBooking.run(bookingId, req.userId, routeId, travelDate, totalAmount);
+    const result = insertBooking.run(
+      bookingId,
+      req.userId,
+      routeId,
+      travelDate,
+      totalAmount,
+      discount,
+      appliedCode,
+    );
     const dbBookingId = result.lastInsertRowid;
     for (const p of passengers) {
       insertDetail.run(dbBookingId, p.seatId, p.name, p.age, p.gender);
@@ -71,6 +92,9 @@ router.post('/', authMiddleware, validate(createBookingSchema), (req: AuthReques
   res.status(201).json({
     bookingId,
     id: dbId,
+    subtotal,
+    discount,
+    promoCode: appliedCode,
     totalAmount,
     status: 'confirmed',
     message: 'Booking confirmed!'
