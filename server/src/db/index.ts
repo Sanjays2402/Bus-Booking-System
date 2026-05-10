@@ -106,6 +106,12 @@ export function initDB() {
     CREATE INDEX IF NOT EXISTS idx_seats_bus ON seats(bus_id);
     CREATE INDEX IF NOT EXISTS idx_reviews_route ON reviews(route_id);
     CREATE INDEX IF NOT EXISTS idx_promo_code ON promo_codes(code);
+    CREATE INDEX IF NOT EXISTS idx_routes_origin_dest_time
+      ON routes(origin, destination, departure_time);
+    CREATE INDEX IF NOT EXISTS idx_bookings_user_status
+      ON bookings(user_id, status);
+    CREATE INDEX IF NOT EXISTS idx_booking_details_booking
+      ON booking_details(booking_id);
   `);
 
   // Lightweight migrations: add nullable columns to bookings if missing
