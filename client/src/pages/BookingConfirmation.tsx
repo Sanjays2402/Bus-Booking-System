@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { CheckCircle, Ticket, ArrowRight, Download } from 'lucide-react';
+import { CheckCircle, Ticket, ArrowRight, Download, Printer } from 'lucide-react';
+import jsPDF from 'jspdf';
+import QRCode from 'qrcode';
 
 export default function BookingConfirmation() {
   const location = useLocation();
@@ -16,6 +19,58 @@ export default function BookingConfirmation() {
   }
 
   const { bookingId, route, date, passengers, totalPrice } = state;
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    QRCode.toDataURL(
+      JSON.stringify({
+        bookingId,
+        from: route.origin,
+        to: route.destination,
+        date,
+        operator: route.operator_name,
+      }),
+      { width: 220, margin: 1, color: { dark: '#1a0a3e', light: '#ffffff' } },
+    )
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(null));
+  }, [bookingId, route, date]);
+
+  const handlePrint = () => window.print();
+
+  const handleDownloadPdf = async () => {
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    let y = 50;
+    doc.setFontSize(20);
+    doc.text('BusGo Booking Confirmation', 40, y);
+    y += 30;
+    doc.setFontSize(11);
+    doc.text(`Booking ID: ${bookingId}`, 40, y); y += 18;
+    doc.text(`Route: ${route.origin} → ${route.destination}`, 40, y); y += 18;
+    doc.text(`Operator: ${route.operator_name} (${route.bus_type})`, 40, y); y += 18;
+    doc.text(`Date: ${new Date(date + 'T00:00').toDateString()}`, 40, y); y += 18;
+    doc.text(`Time: ${route.departure_time} – ${route.arrival_time}`, 40, y); y += 28;
+    doc.setFontSize(13);
+    doc.text('Passengers', 40, y); y += 18;
+    doc.setFontSize(11);
+    passengers.forEach((p: any) => {
+      doc.text(`• ${p.name} (${p.gender || 'N/A'}, ${p.age}) — Seat ${p.seatNumber}`, 50, y);
+      y += 16;
+    });
+    y += 12;
+    doc.setFontSize(13);
+    doc.text(`Total Paid: $${Number(totalPrice).toFixed(2)}`, 40, y);
+    if (qrDataUrl) {
+      try {
+        doc.addImage(qrDataUrl, 'PNG', 400, 60, 140, 140);
+        doc.setFontSize(9);
+        doc.text('Scan at boarding', 420, 215);
+      } catch {
+        // QR not added; ignore
+      }
+    }
+    doc.save(`busgo-${bookingId}.pdf`);
+  };
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
@@ -79,15 +134,40 @@ export default function BookingConfirmation() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link to="/profile" className="btn-glow px-8 py-3 rounded-xl font-bold text-white inline-flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center print:hidden">
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            className="btn-glow px-6 py-3 rounded-xl font-bold text-white inline-flex items-center gap-2"
+          >
             <Download className="w-4 h-4" />
+            Download PDF
+          </button>
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="btn-glass px-6 py-3 rounded-xl font-medium text-white/80 hover:text-white inline-flex items-center gap-2"
+          >
+            <Printer className="w-4 h-4" />
+            Print
+          </button>
+          <Link to="/profile" className="btn-glass px-6 py-3 rounded-xl font-medium text-white/80 hover:text-white">
             View Bookings
           </Link>
-          <Link to="/" className="btn-glass px-8 py-3 rounded-xl font-medium text-white/70 hover:text-white">
+          <Link to="/" className="btn-glass px-6 py-3 rounded-xl font-medium text-white/70 hover:text-white">
             Book Another Trip
           </Link>
         </div>
+        {qrDataUrl && (
+          <div className="mt-6 flex flex-col items-center gap-2">
+            <img
+              src={qrDataUrl}
+              alt="QR code for boarding"
+              className="w-32 h-32 rounded-xl border border-white/10 bg-white p-1"
+            />
+            <p className="text-xs text-white/40">Scan at boarding</p>
+          </div>
+        )}
       </div>
     </div>
   );

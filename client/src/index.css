@@ -209,3 +209,29 @@ select.glass-input option {
 input[type="date"].glass-input::-webkit-calendar-picker-indicator {
   filter: invert(0.7);
 }
+
+/* Print-friendly: keep ticket readable on paper */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+  .bg-orb,
+  nav.glass-strong,
+  footer {
+    display: none !important;
+  }
+  .glass,
+  .glass-strong {
+    background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    color: #111111 !important;
+  }
+  .text-white,
+  .text-white\/40,
+  .text-white\/30 {
+    color: #111111 !important;
+  }
+}
