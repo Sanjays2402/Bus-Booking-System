@@ -106,6 +106,23 @@ body {
   border-color: rgba(255, 255, 255, 0.25);
 }
 
+/* Form input shared style */
+.input {
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.input:focus {
+  border-color: rgba(168, 85, 247, 0.6);
+  background: rgba(255, 255, 255, 0.12);
+}
+
 /* Animated gradient background orbs */
 .bg-orb {
   position: fixed;

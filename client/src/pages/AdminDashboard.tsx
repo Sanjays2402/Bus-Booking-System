@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Route, DollarSign, Trash2, Eye, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { LayoutDashboard, Route, DollarSign, Trash2, Eye, Pencil, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 import RevenueBarChart from '../components/RevenueBarChart';
+import RouteFormModal from '../components/RouteFormModal';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -15,6 +16,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [routeBookings, setRouteBookings] = useState<Record<number, any[]>>({});
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalInitial, setModalInitial] = useState<any>(null);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') { navigate('/'); return; }
@@ -85,6 +88,18 @@ export default function AdminDashboard() {
 
       {tab === 'routes' && (
         <div className="space-y-3 animate-fade-in">
+          <div className="flex justify-end mb-3">
+            <button
+              type="button"
+              onClick={() => {
+                setModalInitial(null);
+                setModalOpen(true);
+              }}
+              className="btn-glow flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-white"
+            >
+              <Plus className="w-4 h-4" /> New route
+            </button>
+          </div>
           {routes.map((r, idx) => (
             <div key={r.id} className="glass rounded-2xl overflow-hidden" style={{ animationDelay: `${idx * 0.03}s` }}>
               <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -102,6 +117,27 @@ export default function AdminDashboard() {
                 <div className="flex gap-2">
                   <button onClick={() => viewBookings(r.id)} className="btn-glass px-3 py-2 rounded-xl text-white/50 hover:text-white">
                     {expanded === r.id ? <ChevronUp className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setModalInitial({
+                        id: r.id,
+                        busId: r.bus_id,
+                        origin: r.origin,
+                        destination: r.destination,
+                        departureTime: r.departure_time,
+                        arrivalTime: r.arrival_time,
+                        durationMinutes: r.duration_minutes,
+                        priceBase: r.price_base,
+                        daysOfWeek: r.days_of_week,
+                        active: r.active,
+                      });
+                      setModalOpen(true);
+                    }}
+                    className="btn-glass px-3 py-2 rounded-xl text-cyan-300 hover:text-cyan-200"
+                    aria-label="Edit route"
+                  >
+                    <Pencil className="w-4 h-4" />
                   </button>
                   <button onClick={() => handleDelete(r.id)} className="btn-glass px-3 py-2 rounded-xl text-red-400 hover:text-red-300">
                     <Trash2 className="w-4 h-4" />
@@ -181,6 +217,12 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      <RouteFormModal
+        open={modalOpen}
+        initial={modalInitial}
+        onClose={() => setModalOpen(false)}
+        onSaved={loadData}
+      />
     </div>
   );
 }
