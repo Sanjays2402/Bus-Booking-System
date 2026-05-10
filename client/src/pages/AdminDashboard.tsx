@@ -4,6 +4,7 @@ import { LayoutDashboard, Route, DollarSign, Trash2, Eye, Plus, ChevronDown, Che
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
+import RevenueBarChart from '../components/RevenueBarChart';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -149,21 +150,13 @@ export default function AdminDashboard() {
             {/* By Operator */}
             <div className="glass rounded-2xl p-6">
               <h3 className="font-bold text-white mb-4">Revenue by Operator</h3>
-              {revenue.byOperator.length === 0 ? (
-                <p className="text-white/30 text-sm">No data</p>
-              ) : (
-                <div className="space-y-3">
-                  {revenue.byOperator.map((op: any) => (
-                    <div key={op.operator_name} className="flex justify-between items-center">
-                      <div>
-                        <p className="text-white font-medium">{op.operator_name}</p>
-                        <p className="text-white/30 text-xs">{op.bookings} bookings</p>
-                      </div>
-                      <span className="text-cyan-400 font-bold">${op.revenue.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <RevenueBarChart
+                data={revenue.byOperator.map((op: any) => ({
+                  label: op.operator_name,
+                  value: op.revenue,
+                  meta: `${op.bookings} bookings`,
+                }))}
+              />
             </div>
 
             {/* By Route */}
