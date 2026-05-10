@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo, KeyboardEvent } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowRight, Info } from 'lucide-react';
 import { api } from '../lib/api';
@@ -48,6 +48,50 @@ export default function SeatSelection() {
   const maxCols = Math.max(...seats.map(s => s.column_number), 0);
   const isSleeper = route?.bus_type?.includes('Sleeper');
 
+  // Sorted seats for keyboard navigation (row, col)
+  const sortedSeats = useMemo(
+    () => [...seats].sort((a, b) => a.row_number - b.row_number || a.column_number - b.column_number),
+    [seats],
+  );
+  const seatRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+  const [focusId, setFocusId] = useState<number | null>(null);
+
+  const focusSeat = (seatId: number) => {
+    setFocusId(seatId);
+    const el = seatRefs.current[seatId];
+    el?.focus();
+  };
+
+  const handleSeatKey = (e: KeyboardEvent<HTMLButtonElement>, seat: Seat) => {
+    const idx = sortedSeats.findIndex((s) => s.id === seat.id);
+    if (idx < 0) return;
+    let nextIdx: number | null = null;
+    if (e.key === 'ArrowRight') nextIdx = Math.min(sortedSeats.length - 1, idx + 1);
+    else if (e.key === 'ArrowLeft') nextIdx = Math.max(0, idx - 1);
+    else if (e.key === 'ArrowDown') {
+      const next = sortedSeats.find(
+        (s, i) => i > idx && s.row_number > seat.row_number && s.column_number === seat.column_number,
+      );
+      if (next) nextIdx = sortedSeats.indexOf(next);
+    } else if (e.key === 'ArrowUp') {
+      const next = [...sortedSeats]
+        .reverse()
+        .find(
+          (s) =>
+            s.row_number < seat.row_number && s.column_number === seat.column_number,
+        );
+      if (next) nextIdx = sortedSeats.indexOf(next);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleSeat(seat.id);
+      return;
+    }
+    if (nextIdx != null) {
+      e.preventDefault();
+      focusSeat(sortedSeats[nextIdx].id);
+    }
+  };
+
   const handleProceed = () => {
     if (!user) {
       toast.error('Please login first');
@@ -92,7 +136,7 @@ export default function SeatSelection() {
             <h2 className="text-lg font-bold text-white mb-6">Select Your Seats</h2>
             
             {/* Legend */}
-            <div className="flex gap-6 mb-6 text-sm">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 mb-6 text-sm" aria-label="Seat legend">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-lg seat-available" />
                 <span className="text-white/50">Available</span>
@@ -105,6 +149,9 @@ export default function SeatSelection() {
                 <div className="w-6 h-6 rounded-lg seat-booked" />
                 <span className="text-white/50">Booked</span>
               </div>
+              <div className="text-white/40 text-xs italic ml-auto self-center">
+                Tip: use ← ↑ → ↓ to navigate, Enter to toggle
+              </div>
             </div>
 
             {/* Bus Shape */}
@@ -115,12 +162,13 @@ export default function SeatSelection() {
               </div>
 
               {/* Seats Grid */}
-              <div className="space-y-2">
+              <div className="space-y-2" role="grid" aria-label="Seat selection grid">
                 {Object.entries(rows).sort(([a], [b]) => Number(a) - Number(b)).map(([rowNum, rowSeats]) => (
-                  <div key={rowNum} className="flex items-center gap-2 justify-center">
+                  <div key={rowNum} className="flex items-center gap-2 justify-center" role="row">
                     {Array.from({ length: maxCols }, (_, colIdx) => {
                       const seat = rowSeats.find(s => s.column_number === colIdx + 1);
                       if (!seat) return <div key={colIdx} className="w-12 h-12" />;
+                      const idx = sortedSeats.findIndex((s) => s.id === seat.id);
 
                       const isBooked = seat.status === 'booked';
                       const isSelected = selected.includes(seat.id);
@@ -129,11 +177,21 @@ export default function SeatSelection() {
                       const addGap = !isSleeper && colIdx === 1;
 
                       return (
-                        <div key={colIdx} className={`flex ${addGap ? 'mr-4' : ''}`}>
+                        <div key={colIdx} className={`flex ${addGap ? 'mr-4' : ''}`} role="gridcell">
                           <button
+                            ref={(el) => {
+                              seatRefs.current[seat.id] = el;
+                            }}
                             onClick={() => toggleSeat(seat.id)}
+                            onKeyDown={(e) => handleSeatKey(e, seat)}
+                            onFocus={() => setFocusId(seat.id)}
                             disabled={isBooked}
-                            className={`seat w-12 h-12 rounded-lg flex flex-col items-center justify-center text-xs font-medium
+                            tabIndex={isBooked ? -1 : focusId === seat.id || (focusId == null && idx === 0) ? 0 : -1}
+                            aria-label={`Seat ${seat.seat_number}, ${seat.seat_type}, $${seat.price}, ${
+                              isBooked ? 'booked' : isSelected ? 'selected' : 'available'
+                            }`}
+                            aria-pressed={isSelected}
+                            className={`seat w-12 h-12 rounded-lg flex flex-col items-center justify-center text-xs font-medium focus:outline-none focus:ring-2 focus:ring-purple-400/70
                               ${isBooked ? 'seat-booked' : isSelected ? 'seat-selected' : 'seat-available'}`}
                             title={`${seat.seat_number} (${seat.seat_type}) — $${seat.price}`}
                           >
