@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Clock, Star, Wifi, Filter, ArrowRight, Zap } from 'lucide-react';
+import { Clock, Star, Wifi, Filter, ArrowRight, Zap, Info } from 'lucide-react';
 import { api } from '../lib/api';
 import { Route } from '../types';
+import BusDetailsDrawer from '../components/BusDetailsDrawer';
 
 export default function SearchResults() {
   const [params] = useSearchParams();
@@ -11,6 +12,7 @@ export default function SearchResults() {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('departure');
   const [busTypeFilter, setBusTypeFilter] = useState('');
+  const [detailsRoute, setDetailsRoute] = useState<Route | null>(null);
 
   const origin = params.get('origin') || '';
   const destination = params.get('destination') || '';
@@ -140,12 +142,23 @@ export default function SearchResults() {
                       <p className="text-3xl font-extrabold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">${route.price_base}</p>
                       <p className="text-xs text-white/25 text-right">per seat</p>
                     </div>
-                    <button
-                      onClick={() => navigate(`/seats/${route.id}?date=${date || new Date().toISOString().split('T')[0]}`)}
-                      className="btn-glow px-7 py-2.5 rounded-xl font-bold text-white text-sm"
-                    >
-                      Select Seats
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDetailsRoute(route)}
+                        className="btn-glass px-3 py-2.5 rounded-xl font-semibold text-white/80 text-sm inline-flex items-center gap-1.5"
+                        aria-label={`View details for ${route.operator_name}`}
+                      >
+                        <Info className="w-4 h-4" />
+                        Details
+                      </button>
+                      <button
+                        onClick={() => navigate(`/seats/${route.id}?date=${date || new Date().toISOString().split('T')[0]}`)}
+                        className="btn-glow px-7 py-2.5 rounded-xl font-bold text-white text-sm"
+                      >
+                        Select Seats
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -153,6 +166,7 @@ export default function SearchResults() {
           })}
         </div>
       )}
+      <BusDetailsDrawer route={detailsRoute} onClose={() => setDetailsRoute(null)} />
     </div>
   );
 }
