@@ -125,6 +125,28 @@ router.get('/my', authMiddleware, (req: AuthRequest, res) => {
   res.json(enriched);
 });
 
+// Get a single booking by booking_id (polling endpoint)
+router.get('/:bookingId', authMiddleware, (req: AuthRequest, res) => {
+  const booking = db
+    .prepare(
+      `SELECT bk.*, r.origin, r.destination, r.departure_time, r.arrival_time,
+              b.operator_name, b.bus_number, b.bus_type
+         FROM bookings bk
+         JOIN routes r ON bk.route_id = r.id
+         JOIN buses b ON r.bus_id = b.id
+        WHERE bk.booking_id = ? AND bk.user_id = ?`,
+    )
+    .get(req.params.bookingId, req.userId!) as any;
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+  const passengers = db
+    .prepare(
+      `SELECT bd.*, s.seat_number, s.seat_type FROM booking_details bd
+         JOIN seats s ON bd.seat_id = s.id WHERE bd.booking_id = ?`,
+    )
+    .all(booking.id);
+  res.json({ ...booking, passengers });
+});
+
 // Cancel booking
 router.patch('/:bookingId/cancel', authMiddleware, (req: AuthRequest, res) => {
   const booking = db.prepare('SELECT * FROM bookings WHERE booking_id = ? AND user_id = ?').get(req.params.bookingId, req.userId!) as any;
