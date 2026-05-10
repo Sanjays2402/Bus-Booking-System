@@ -2,17 +2,14 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { createBookingSchema } from '../schemas';
 
 const router = Router();
 
 // Create booking
-router.post('/', authMiddleware, (req: AuthRequest, res) => {
+router.post('/', authMiddleware, validate(createBookingSchema), (req: AuthRequest, res) => {
   const { routeId, travelDate, passengers } = req.body;
-  // passengers: [{ seatId, name, age, gender }]
-
-  if (!routeId || !travelDate || !passengers?.length) {
-    return res.status(400).json({ error: 'Route, date, and passengers required' });
-  }
 
   const route = db.prepare('SELECT r.*, b.bus_type FROM routes r JOIN buses b ON r.bus_id = b.id WHERE r.id = ?').get(routeId) as any;
   if (!route) return res.status(404).json({ error: 'Route not found' });
