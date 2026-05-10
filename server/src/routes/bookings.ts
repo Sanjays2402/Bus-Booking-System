@@ -4,8 +4,29 @@ import db from '../db';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { createBookingSchema } from '../schemas';
+import { evaluatePromo } from '../lib/promo';
+import { z } from 'zod';
 
 const router = Router();
+
+// Validate a promo code against a tentative subtotal
+const validatePromoSchema = z.object({
+  code: z.string().trim().min(1).max(40),
+  total: z.number().positive(),
+});
+
+router.post('/validate-promo', validate(validatePromoSchema), (req, res) => {
+  const { code, total } = req.body as { code: string; total: number };
+  const result = evaluatePromo(code, total);
+  if (!result.ok) return res.status(400).json({ error: result.reason });
+  res.json({
+    code: result.promo!.code,
+    kind: result.promo!.kind,
+    amount: result.promo!.amount,
+    discount: result.discount,
+    finalTotal: Math.round((total - (result.discount || 0)) * 100) / 100,
+  });
+});
 
 // Create booking
 router.post('/', authMiddleware, validate(createBookingSchema), (req: AuthRequest, res) => {

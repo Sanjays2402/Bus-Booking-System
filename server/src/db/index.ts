@@ -88,12 +88,36 @@ export function initDB() {
       UNIQUE(route_id, user_id)
     );
 
+    CREATE TABLE IF NOT EXISTS promo_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT UNIQUE NOT NULL,
+      kind TEXT NOT NULL CHECK(kind IN ('percent','flat')),
+      amount REAL NOT NULL,
+      min_total REAL DEFAULT 0,
+      max_discount REAL,
+      active INTEGER DEFAULT 1,
+      expires_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_routes_origin_dest ON routes(origin, destination);
     CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id);
     CREATE INDEX IF NOT EXISTS idx_bookings_route_date ON bookings(route_id, travel_date);
     CREATE INDEX IF NOT EXISTS idx_seats_bus ON seats(bus_id);
     CREATE INDEX IF NOT EXISTS idx_reviews_route ON reviews(route_id);
+    CREATE INDEX IF NOT EXISTS idx_promo_code ON promo_codes(code);
   `);
+
+  // Seed a couple of starter promo codes if table is empty
+  const promoCount = db.prepare('SELECT COUNT(*) as c FROM promo_codes').get() as { c: number };
+  if (promoCount.c === 0) {
+    const insert = db.prepare(
+      `INSERT INTO promo_codes (code, kind, amount, min_total, max_discount, active)
+         VALUES (?, ?, ?, ?, ?, 1)`,
+    );
+    insert.run('WELCOME10', 'percent', 10, 0, 25);
+    insert.run('SAVE5', 'flat', 5, 20, null);
+  }
 }
 
 export default db;
