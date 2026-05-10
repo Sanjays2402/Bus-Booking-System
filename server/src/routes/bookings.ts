@@ -5,6 +5,7 @@ import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { createBookingSchema } from '../schemas';
 import { evaluatePromo } from '../lib/promo';
+import { quoteRefund } from '../config/refund';
 import { z } from 'zod';
 
 const router = Router();
@@ -153,23 +154,31 @@ router.patch('/:bookingId/cancel', authMiddleware, (req: AuthRequest, res) => {
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
   if (booking.status === 'cancelled') return res.status(400).json({ error: 'Already cancelled' });
 
-  // Cancellation policy: full refund if > 24h before travel
-  const travelDate = new Date(booking.travel_date);
-  const now = new Date();
-  const hoursUntilTravel = (travelDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-  
-  let refundPercent = 100;
-  if (hoursUntilTravel < 2) refundPercent = 0;
-  else if (hoursUntilTravel < 12) refundPercent = 50;
-  else if (hoursUntilTravel < 24) refundPercent = 75;
+  const { refundPercent, refundAmount, tier } = quoteRefund(
+    booking.travel_date,
+    booking.total_amount,
+  );
 
   db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run('cancelled', booking.id);
 
   res.json({
     message: 'Booking cancelled',
     refundPercent,
-    refundAmount: Math.round(booking.total_amount * refundPercent / 100 * 100) / 100
+    refundAmount,
+    tier,
   });
+});
+
+// Refund quote (read-only) — lets the client preview refund before cancelling
+router.get('/:bookingId/refund-quote', authMiddleware, (req: AuthRequest, res) => {
+  const booking = db
+    .prepare('SELECT * FROM bookings WHERE booking_id = ? AND user_id = ?')
+    .get(req.params.bookingId, req.userId!) as any;
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+  if (booking.status === 'cancelled') {
+    return res.status(400).json({ error: 'Booking is already cancelled' });
+  }
+  res.json(quoteRefund(booking.travel_date, booking.total_amount));
 });
 
 export default router;
