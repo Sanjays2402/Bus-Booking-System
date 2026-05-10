@@ -38,14 +38,16 @@ export default function BookingPage() {
       }
     }
     setSubmitting(true);
+    const tid = toast.loading('Confirming your booking…');
     try {
       const result = await api.createBooking({
         routeId, travelDate: date,
         passengers: passengers.map(p => ({ seatId: p.seatId, name: p.name, age: p.age, gender: p.gender }))
       });
+      toast.success('Booking confirmed!', { id: tid });
       navigate('/booking/confirmed', { state: { ...result, route, date, passengers, totalPrice } });
     } catch (err: any) {
-      toast.error(err.message || 'Booking failed');
+      toast.error(err.message || 'Booking failed', { id: tid });
     } finally {
       setSubmitting(false);
     }

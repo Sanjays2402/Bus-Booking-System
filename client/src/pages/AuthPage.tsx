@@ -16,16 +16,17 @@ export default function AuthPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const tid = toast.loading(isLogin ? 'Signing in…' : 'Creating your account…');
     try {
       if (isLogin) {
         await login(email, password);
       } else {
         await register(email, name, password);
       }
-      toast.success(isLogin ? 'Welcome back!' : 'Account created!');
+      toast.success(isLogin ? 'Welcome back!' : 'Account created!', { id: tid });
       navigate('/');
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message, { id: tid });
     } finally {
       setLoading(false);
     }
