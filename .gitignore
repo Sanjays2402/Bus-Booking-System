@@ -9,3 +9,9 @@ server/data/
 .DS_Store
 .vscode/
 .idea/
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
