@@ -17,6 +17,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import HelpPage from './pages/HelpPage';
 import PricingPage from './pages/PricingPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 function BackgroundOrbs() {
   return (
@@ -48,6 +49,7 @@ function AppContent() {
             <Route path="/reset" element={<ResetPasswordPage />} />
             <Route path="/help" element={<HelpPage />} />
             <Route path="/pricing" element={<PricingPage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>
         <Footer />
