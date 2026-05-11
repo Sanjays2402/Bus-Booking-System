@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db';
 import { authMiddleware, adminMiddleware, AuthRequest } from '../middleware/auth';
+import { auditMiddleware } from '../lib/audit';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ router.get('/routes', (_req, res) => {
 });
 
 // Add route
-router.post('/routes', (req, res) => {
+router.post('/routes', auditMiddleware('admin.route.create', 'route'), (req, res) => {
   const { busId, origin, destination, departureTime, arrivalTime, durationMinutes, priceBase, daysOfWeek } = req.body;
   const result = db.prepare(`
     INSERT INTO routes (bus_id, origin, destination, departure_time, arrival_time, duration_minutes, price_base, days_of_week)
@@ -26,7 +27,7 @@ router.post('/routes', (req, res) => {
 });
 
 // Update route
-router.put('/routes/:id', (req, res) => {
+router.put('/routes/:id', auditMiddleware('admin.route.update', 'route'), (req, res) => {
   const { origin, destination, departureTime, arrivalTime, durationMinutes, priceBase, daysOfWeek, active } = req.body;
   db.prepare(`
     UPDATE routes SET origin=?, destination=?, departure_time=?, arrival_time=?, duration_minutes=?, price_base=?, days_of_week=?, active=?
@@ -36,7 +37,7 @@ router.put('/routes/:id', (req, res) => {
 });
 
 // Delete route
-router.delete('/routes/:id', (req, res) => {
+router.delete('/routes/:id', auditMiddleware('admin.route.delete', 'route'), (req, res) => {
   db.prepare('DELETE FROM routes WHERE id = ?').run(req.params.id);
   res.json({ success: true });
 });
