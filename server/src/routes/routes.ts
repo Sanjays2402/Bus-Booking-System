@@ -3,6 +3,7 @@ import db from '../db';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { z } from 'zod';
+import { claimSeats, releaseSeats, listLockedSeats } from '../lib/seatLocks';
 
 const router = Router();
 
@@ -154,6 +155,65 @@ router.post(
            DO UPDATE SET rating = excluded.rating, comment = excluded.comment, created_at = datetime('now')`,
     ).run(routeId, req.userId!, rating, comment ?? null);
     res.status(201).json({ message: 'Review saved' });
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Seat locks: hold seats for up to 5 minutes while a user checks out.
+// ---------------------------------------------------------------------------
+const lockClaimSchema = z.object({
+  travelDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  seatIds: z.array(z.number().int().positive()).min(1).max(10),
+});
+
+// GET /api/routes/:id/locks?date=YYYY-MM-DD — list seat ids currently locked
+router.get('/:id/locks', (req, res) => {
+  const routeId = Number(req.params.id);
+  const date = String(req.query.date || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: 'date query param required (YYYY-MM-DD)' });
+  }
+  const locks = listLockedSeats(routeId, date);
+  res.json({
+    locks: locks.map((l) => ({ seatId: l.seatId, expiresAt: l.expiresAt })),
+  });
+});
+
+// POST /api/routes/:id/locks — claim a set of seats for the authed user
+router.post(
+  '/:id/locks',
+  authMiddleware,
+  validate(lockClaimSchema),
+  (req: AuthRequest, res) => {
+    const routeId = Number(req.params.id);
+    const { travelDate, seatIds } = req.body as {
+      travelDate: string;
+      seatIds: number[];
+    };
+    const result = claimSeats(routeId, travelDate, seatIds, req.userId!);
+    if (!result.ok) {
+      return res.status(409).json({
+        error: 'One or more seats are currently held by another user',
+        conflicts: result.conflicts,
+      });
+    }
+    res.json({ ok: true, expiresAt: result.expiresAt });
+  },
+);
+
+// DELETE /api/routes/:id/locks — release seats the user holds
+router.delete(
+  '/:id/locks',
+  authMiddleware,
+  validate(lockClaimSchema),
+  (req: AuthRequest, res) => {
+    const routeId = Number(req.params.id);
+    const { travelDate, seatIds } = req.body as {
+      travelDate: string;
+      seatIds: number[];
+    };
+    const { released } = releaseSeats(routeId, travelDate, seatIds, req.userId!);
+    res.json({ released });
   },
 );
 
