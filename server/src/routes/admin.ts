@@ -73,4 +73,56 @@ router.get('/revenue', (_req, res) => {
   res.json({ totalRevenue: total.total, byOperator, byRoute });
 });
 
+// Audit log: paginated, newest first. Supports ?limit=&offset=&entity=&action=
+router.get('/audit', (req, res) => {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 500);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+  const entity = typeof req.query.entity === 'string' ? req.query.entity : null;
+  const action = typeof req.query.action === 'string' ? req.query.action : null;
+
+  const where: string[] = [];
+  const params: any[] = [];
+  if (entity) {
+    where.push('entity = ?');
+    params.push(entity);
+  }
+  if (action) {
+    where.push('action LIKE ?');
+    params.push(`%${action}%`);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const rows = db
+    .prepare(
+      `SELECT id, user_id, user_email, action, entity, entity_id, meta, ip, created_at
+         FROM audit_logs ${whereSql}
+         ORDER BY id DESC LIMIT ? OFFSET ?`,
+    )
+    .all(...params, limit, offset) as Array<{
+      id: number;
+      user_id: number | null;
+      user_email: string | null;
+      action: string;
+      entity: string;
+      entity_id: string | null;
+      meta: string | null;
+      ip: string | null;
+      created_at: string;
+    }>;
+
+  const total = db
+    .prepare(`SELECT COUNT(*) as c FROM audit_logs ${whereSql}`)
+    .get(...params) as { c: number };
+
+  res.json({
+    total: total.c,
+    limit,
+    offset,
+    items: rows.map((r) => ({
+      ...r,
+      meta: r.meta ? JSON.parse(r.meta) : null,
+    })),
+  });
+});
+
 export default router;
