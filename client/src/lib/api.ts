@@ -57,6 +57,15 @@ export const api = {
   deleteRoute: (id: number) => request<any>(`/admin/routes/${id}`, { method: 'DELETE' }),
   getAdminBuses: () => request<any[]>('/admin/buses'),
   getRouteBookings: (id: number) => request<any[]>(`/admin/routes/${id}/bookings`),
+  getAllBookings: (params: { status?: string; limit?: number; offset?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set('status', params.status);
+    if (params.limit != null) qs.set('limit', String(params.limit));
+    if (params.offset != null) qs.set('offset', String(params.offset));
+    return request<{ total: number; limit: number; offset: number; items: any[] }>(
+      `/admin/bookings${qs.toString() ? `?${qs}` : ''}`,
+    );
+  },
   getRevenue: () => request<any>('/admin/revenue'),
   getAuditLog: (params: { entity?: string; action?: string; limit?: number; offset?: number } = {}) => {
     const qs = new URLSearchParams();
