@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './hooks/useAuth';
@@ -6,18 +7,29 @@ import { I18nProvider } from './i18n';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
-import SearchResults from './pages/SearchResults';
-import SeatSelection from './pages/SeatSelection';
-import BookingPage from './pages/BookingPage';
-import BookingConfirmation from './pages/BookingConfirmation';
-import ProfilePage from './pages/ProfilePage';
-import AdminDashboard from './pages/AdminDashboard';
-import AuthPage from './pages/AuthPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import HelpPage from './pages/HelpPage';
-import PricingPage from './pages/PricingPage';
-import NotFoundPage from './pages/NotFoundPage';
+
+// Route-level code splitting. Each route becomes its own JS chunk so the
+// landing page only pays for HomePage + shell on first paint.
+const SearchResults = lazy(() => import('./pages/SearchResults'));
+const SeatSelection = lazy(() => import('./pages/SeatSelection'));
+const BookingPage = lazy(() => import('./pages/BookingPage'));
+const BookingConfirmation = lazy(() => import('./pages/BookingConfirmation'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AuthPage = lazy(() => import('./pages/AuthPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const HelpPage = lazy(() => import('./pages/HelpPage'));
+const PricingPage = lazy(() => import('./pages/PricingPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+
+function RouteFallback() {
+  return (
+    <div className="flex items-center justify-center py-32" role="status" aria-label="Loading">
+      <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 function BackgroundOrbs() {
   return (
@@ -36,7 +48,8 @@ function AppContent() {
       <div className="relative z-10 flex-1 flex flex-col">
         <Navbar />
         <main className="flex-1">
-          <Routes>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/search" element={<SearchResults />} />
             <Route path="/seats/:routeId" element={<SeatSelection />} />
@@ -51,6 +64,7 @@ function AppContent() {
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
+          </Suspense>
         </main>
         <Footer />
       </div>
