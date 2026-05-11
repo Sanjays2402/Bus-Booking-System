@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, UserPlus, LogIn } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -78,6 +78,16 @@ export default function AuthPage() {
               minLength={6}
             />
           </div>
+          {isLogin && (
+            <div className="flex justify-end -mt-2">
+              <Link
+                to="/forgot"
+                className="text-xs text-purple-300 hover:text-purple-200"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}

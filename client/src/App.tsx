@@ -13,6 +13,8 @@ import BookingConfirmation from './pages/BookingConfirmation';
 import ProfilePage from './pages/ProfilePage';
 import AdminDashboard from './pages/AdminDashboard';
 import AuthPage from './pages/AuthPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 function BackgroundOrbs() {
   return (
@@ -40,6 +42,8 @@ function AppContent() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/forgot" element={<ForgotPasswordPage />} />
+            <Route path="/reset" element={<ResetPasswordPage />} />
           </Routes>
         </main>
         <Footer />
