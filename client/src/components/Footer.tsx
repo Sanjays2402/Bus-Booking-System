@@ -1,6 +1,9 @@
 import { Bus, Github, Heart } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useI18n } from '../i18n';
 
 export default function Footer() {
+  const { t } = useI18n();
   return (
     <footer className="glass-strong mt-20 border-t border-white/10">
       <div className="max-w-7xl mx-auto px-4 py-10 grid gap-8 md:grid-cols-4">
@@ -12,7 +15,7 @@ export default function Footer() {
             BusGo
           </div>
           <p className="mt-3 text-sm text-white/60">
-            Smooth, secure intercity bus booking with a glassy modern UI.
+            {t('footer.tagline')}
           </p>
         </div>
         <div>
@@ -27,8 +30,16 @@ export default function Footer() {
           <h4 className="text-white text-sm font-semibold mb-3">Account</h4>
           <ul className="space-y-2 text-sm text-white/60">
             <li>My bookings</li>
-            <li>Refund policy</li>
-            <li>Promo codes</li>
+            <li>
+              <Link to="/pricing" className="hover:text-white">
+                {t('footer.pricing')}
+              </Link>
+            </li>
+            <li>
+              <Link to="/help" className="hover:text-white">
+                {t('footer.help')}
+              </Link>
+            </li>
           </ul>
         </div>
         <div>
