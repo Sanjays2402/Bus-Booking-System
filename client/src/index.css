@@ -265,6 +265,19 @@ body {
   cursor: not-allowed;
 }
 
+.seat-held {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: rgba(245, 158, 11, 0.85);
+  cursor: not-allowed;
+  animation: pulseHold 1.8s ease-in-out infinite;
+}
+
+@keyframes pulseHold {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

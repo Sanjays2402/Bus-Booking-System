@@ -17,6 +17,46 @@ export default function SeatSelection() {
   const [seats, setSeats] = useState<Seat[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lockedByOther, setLockedByOther] = useState<Set<number>>(new Set());
+
+  // Poll for locks held by other users every 8s so the seat map stays current.
+  useEffect(() => {
+    if (!routeId) return;
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const res: any = await api.getSeatLocks(Number(routeId), date);
+        if (cancelled) return;
+        const mine = new Set(selected);
+        const others = new Set<number>(
+          (res?.locks || res || [])
+            .map((l: any) => l.seatId)
+            .filter((id: number) => !mine.has(id)),
+        );
+        setLockedByOther(others);
+      } catch {
+        /* ignore polling errors */
+      }
+    };
+    refresh();
+    const handle = setInterval(refresh, 8000);
+    return () => {
+      cancelled = true;
+      clearInterval(handle);
+    };
+  }, [routeId, date, selected]);
+
+  // Release our locks on unmount
+  useEffect(() => {
+    return () => {
+      if (routeId && selected.length > 0) {
+        api
+          .releaseSeatLocks(Number(routeId), date, selected)
+          .catch(() => {});
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!routeId) return;
@@ -29,10 +69,25 @@ export default function SeatSelection() {
     }).catch(() => toast.error('Failed to load')).finally(() => setLoading(false));
   }, [routeId, date]);
 
-  const toggleSeat = (seatId: number) => {
+  const toggleSeat = async (seatId: number) => {
     const seat = seats.find(s => s.id === seatId);
     if (!seat || seat.status === 'booked') return;
-    setSelected(prev => prev.includes(seatId) ? prev.filter(id => id !== seatId) : [...prev, seatId]);
+    if (lockedByOther.has(seatId)) {
+      toast.error('Another rider is holding this seat — try again in a minute.');
+      return;
+    }
+    const isSelected = selected.includes(seatId);
+    if (isSelected) {
+      setSelected(prev => prev.filter(id => id !== seatId));
+      if (routeId) api.releaseSeatLocks(Number(routeId), date, [seatId]).catch(() => {});
+      return;
+    }
+    try {
+      if (routeId) await api.claimSeatLocks(Number(routeId), date, [seatId]);
+      setSelected(prev => [...prev, seatId]);
+    } catch (err: any) {
+      toast.error(err?.message || 'Seat already held');
+    }
   };
 
   const selectedSeats = seats.filter(s => selected.includes(s.id));
@@ -172,6 +227,8 @@ export default function SeatSelection() {
 
                       const isBooked = seat.status === 'booked';
                       const isSelected = selected.includes(seat.id);
+                      const isHeldByOther = lockedByOther.has(seat.id);
+                      const isDisabled = isBooked || isHeldByOther;
 
                       // Add aisle gap
                       const addGap = !isSleeper && colIdx === 1;
@@ -185,15 +242,15 @@ export default function SeatSelection() {
                             onClick={() => toggleSeat(seat.id)}
                             onKeyDown={(e) => handleSeatKey(e, seat)}
                             onFocus={() => setFocusId(seat.id)}
-                            disabled={isBooked}
-                            tabIndex={isBooked ? -1 : focusId === seat.id || (focusId == null && idx === 0) ? 0 : -1}
+                            disabled={isDisabled}
+                            tabIndex={isDisabled ? -1 : focusId === seat.id || (focusId == null && idx === 0) ? 0 : -1}
                             aria-label={`Seat ${seat.seat_number}, ${seat.seat_type}, $${seat.price}, ${
-                              isBooked ? 'booked' : isSelected ? 'selected' : 'available'
+                              isBooked ? 'booked' : isHeldByOther ? 'held by another rider' : isSelected ? 'selected' : 'available'
                             }`}
                             aria-pressed={isSelected}
                             className={`seat w-12 h-12 rounded-lg flex flex-col items-center justify-center text-xs font-medium focus:outline-none focus:ring-2 focus:ring-purple-400/70
-                              ${isBooked ? 'seat-booked' : isSelected ? 'seat-selected' : 'seat-available'}`}
-                            title={`${seat.seat_number} (${seat.seat_type}) — $${seat.price}`}
+                              ${isBooked ? 'seat-booked' : isHeldByOther ? 'seat-held' : isSelected ? 'seat-selected' : 'seat-available'}`}
+                            title={`${seat.seat_number} (${seat.seat_type}) — $${seat.price}${isHeldByOther ? ' — held by another rider' : ''}`}
                           >
                             <span className="text-[10px]">{seat.seat_number}</span>
                             <span className="text-[8px] opacity-60">${seat.price}</span>
