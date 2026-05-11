@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Bus, User, LogOut, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -19,6 +20,7 @@ export default function Navbar() {
           BusGo
         </Link>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           {user ? (
             <>
               <Link
