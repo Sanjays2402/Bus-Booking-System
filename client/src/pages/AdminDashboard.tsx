@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Route, DollarSign, Trash2, Eye, Pencil, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { LayoutDashboard, Route, DollarSign, ScrollText, Trash2, Eye, Pencil, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -10,9 +10,10 @@ import RouteFormModal from '../components/RouteFormModal';
 export default function AdminDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<'routes' | 'revenue'>('routes');
+  const [tab, setTab] = useState<'routes' | 'revenue' | 'audit'>('routes');
   const [routes, setRoutes] = useState<any[]>([]);
   const [revenue, setRevenue] = useState<any>(null);
+  const [audit, setAudit] = useState<{ items: any[]; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [routeBookings, setRouteBookings] = useState<Record<number, any[]>>({});
@@ -72,10 +73,16 @@ export default function AdminDashboard() {
         {[
           { key: 'routes' as const, label: 'Routes', icon: Route },
           { key: 'revenue' as const, label: 'Revenue', icon: DollarSign },
+          { key: 'audit' as const, label: 'Audit log', icon: ScrollText },
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
-            onClick={() => setTab(key)}
+            onClick={() => {
+              setTab(key);
+              if (key === 'audit' && !audit) {
+                api.getAuditLog({ limit: 50 }).then(setAudit).catch(() => toast.error('Failed to load audit log'));
+              }
+            }}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition ${
               tab === key ? 'btn-glow text-white' : 'btn-glass text-white/50 hover:text-white'
             }`}
@@ -214,6 +221,50 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {tab === 'audit' && (
+        <div className="animate-fade-in">
+          <div className="glass rounded-2xl p-6">
+            <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+              <ScrollText className="w-4 h-4 text-purple-300" /> Admin actions
+              {audit && (
+                <span className="text-xs font-normal text-white/40">
+                  (showing {audit.items.length} of {audit.total})
+                </span>
+              )}
+            </h3>
+            {!audit ? (
+              <p className="text-white/30 text-sm">Loading…</p>
+            ) : audit.items.length === 0 ? (
+              <p className="text-white/30 text-sm">No admin actions recorded yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-white/80">
+                  <thead className="text-xs uppercase text-white/40 border-b border-white/10">
+                    <tr>
+                      <th className="py-2 pr-4">When</th>
+                      <th className="py-2 pr-4">Actor</th>
+                      <th className="py-2 pr-4">Action</th>
+                      <th className="py-2 pr-4">Entity</th>
+                      <th className="py-2 pr-4">Target</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {audit.items.map((row) => (
+                      <tr key={row.id} className="border-b border-white/5">
+                        <td className="py-2 pr-4 text-white/50 whitespace-nowrap">{row.created_at}</td>
+                        <td className="py-2 pr-4">{row.actor_email || `#${row.actor_id}`}</td>
+                        <td className="py-2 pr-4 text-cyan-300">{row.action}</td>
+                        <td className="py-2 pr-4">{row.entity}</td>
+                        <td className="py-2 pr-4 text-white/40">{row.entity_id ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
