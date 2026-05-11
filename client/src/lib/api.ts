@@ -42,6 +42,11 @@ export const api = {
   // Bookings
   createBooking: (data: { routeId: number; travelDate: string; passengers: any[] }) =>
     request<any>('/bookings', { method: 'POST', body: JSON.stringify(data) }),
+  validatePromo: (code: string, total: number) =>
+    request<{ code: string; discount: number; finalTotal: number }>(
+      '/bookings/validate-promo',
+      { method: 'POST', body: JSON.stringify({ code, total }) },
+    ),
   getMyBookings: () => request<any[]>('/bookings/my'),
   cancelBooking: (bookingId: string) => request<any>(`/bookings/${bookingId}/cancel`, { method: 'PATCH' }),
 
