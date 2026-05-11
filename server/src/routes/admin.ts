@@ -57,6 +57,39 @@ router.get('/routes/:id/bookings', (req, res) => {
   res.json(bookings);
 });
 
+// All bookings (system-wide, paginated) for the support view
+router.get('/bookings', (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 100, 500);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+  const status = typeof req.query.status === 'string' ? req.query.status : null;
+
+  const where = status ? 'WHERE bk.status = ?' : '';
+  const params: any[] = status ? [status, limit, offset] : [limit, offset];
+  const totalRow = db
+    .prepare(
+      `SELECT COUNT(*) AS c FROM bookings bk ${where}`,
+    )
+    .get(...(status ? [status] : [])) as { c: number };
+
+  const items = db
+    .prepare(
+      `SELECT bk.id, bk.booking_id, bk.status, bk.total_amount,
+              bk.discount_amount, bk.promo_code, bk.travel_date, bk.created_at,
+              u.name AS user_name, u.email AS user_email,
+              r.origin, r.destination, b.operator_name
+         FROM bookings bk
+         JOIN users u ON bk.user_id = u.id
+         JOIN routes r ON bk.route_id = r.id
+         JOIN buses b ON r.bus_id = b.id
+         ${where}
+         ORDER BY bk.created_at DESC
+         LIMIT ? OFFSET ?`,
+    )
+    .all(...params);
+
+  res.json({ total: totalRow.c, limit, offset, items });
+});
+
 // Revenue summary
 router.get('/revenue', (_req, res) => {
   const total = db.prepare(`SELECT COALESCE(SUM(total_amount),0) as total FROM bookings WHERE status='confirmed'`).get() as any;
