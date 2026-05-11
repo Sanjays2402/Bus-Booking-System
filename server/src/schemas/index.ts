@@ -11,6 +11,15 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(16).max(128),
+  newPassword: z.string().min(6).max(120),
+});
+
 export const passengerSchema = z.object({
   seatId: z.number().int().positive(),
   name: z.string().min(1).max(80),
