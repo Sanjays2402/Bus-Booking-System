@@ -26,6 +26,23 @@ A modern, full-stack bus booking platform with a stunning glassmorphism UI. Sear
 - Select seats → Enter passenger details → Review → Confirm
 - Unique ticket ID for every booking
 - Instant booking confirmation with ticket summary
+- **Server-side PDF e-tickets** at `/api/bookings/:id/ticket.pdf`
+- **Realtime seat holds** — seats are locked for 5 minutes while you check out
+
+### 🎨 Design & UX
+- **Glassmorphism UI** — frosted glass cards, backdrop blur, translucent layers
+- **Light + dark theme toggle**, persisted in localStorage
+- **Internationalization** — English and Spanish out of the box
+- **Animated** — fade-ins, hover transitions, glowing accents, animated 404
+- **Responsive** — works on mobile, tablet, and desktop
+- **Phosphor / lucide icons** + Inter typography
+
+### 🔐 Security & Reliability
+- JWT auth, password hashing (bcryptjs)
+- helmet + per-route rate limiting on `/api/auth`
+- zod input validation on every write path
+- **Password reset flow** with single-use tokens (`/api/auth/forgot` + `/reset`)
+- Audit log of admin actions exposed at `/api/admin/audit`
 
 ### 👤 User System
 - JWT-based authentication (register/login)
@@ -79,6 +96,21 @@ npm run dev
 
 - **Frontend:** http://localhost:5173
 - **Backend API:** http://localhost:3001
+
+### Run via Docker
+
+The repo ships with per-service Dockerfiles and a `docker-compose.yml`. nginx
+in the client image reverse-proxies `/api/*` to the server container, so the
+whole stack is reachable on a single port.
+
+```bash
+docker compose up --build
+# Visit http://localhost:8080
+```
+
+Set `JWT_SECRET` in your shell or a `.env` next to `docker-compose.yml` to
+override the placeholder secret. The server keeps its SQLite database on a
+named volume so data survives `docker compose down`.
 
 ### Demo Accounts
 
